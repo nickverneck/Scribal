@@ -42,3 +42,14 @@ Auto-migrations in dev
   - wait for Postgres (retry up to ~30s)
   - run migrations from `apps/server/drizzle/`
   - start Socket.IO + Express
+
+Docker: full stack (dev)
+- Build and run web + server + db: `docker compose up --build`
+- Open: `http://localhost:5173` (frontend), backend at `http://localhost:5174`
+- Live reload: source folders are mounted into containers; changes reflect automatically
+- Stop: `docker compose down`
+
+Notes
+- Frontend dev server binds to `0.0.0.0` inside container and is published to host `:5173`.
+- Backend dev server runs migrations at start and binds to `0.0.0.0` on `:5174`.
+- Inside Docker network, the server reaches Postgres via `db:5432`; the browser reaches the server via `http://localhost:5174`.
