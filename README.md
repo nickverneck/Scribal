@@ -23,10 +23,22 @@ Monorepo
 Quick start
 1. Create `.env` files as per `.env.example` in `apps/server` and `apps/web`.
 2. Install deps: `npm install` (workspace root)
-3. Generate/migrate DB: `npm run db:generate && npm run db:migrate`
-4. Dev: `npm run dev` (runs server on `:5174` and web on `:5173` with proxy)
+3. Generate/migrate DB once (optional): `npm run db:generate && npm run db:migrate`
+4. Dev: `npm run dev` (server auto-waits for Postgres and runs migrations, server on `:5174`, web on `:5173`)
 
 Notes
 - Web Speech API is only available in supported browsers; a basic fallback logger is included.
 - STUN server uses public Google STUN as default; replace with your own TURN for NAT traversal in production.
 
+Docker (Postgres only)
+- Start DB: `docker compose up -d db`
+- Optional pgAdmin: `docker compose up -d pgadmin` then visit `http://localhost:5050` (admin@example.com / admin1234)
+- Connection string (server `.env`): `DATABASE_URL=postgres://scribal:scribal@localhost:5432/scribal`
+- Stop DB: `docker compose down`
+- Wipe volumes: `docker compose down -v` (destructive)
+
+Auto-migrations in dev
+- `npm run dev` for the server will:
+  - wait for Postgres (retry up to ~30s)
+  - run migrations from `apps/server/drizzle/`
+  - start Socket.IO + Express

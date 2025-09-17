@@ -1,0 +1,40 @@
+version: '3.9'
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: scribal-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: scribal
+      POSTGRES_USER: scribal
+      POSTGRES_PASSWORD: scribal
+    ports:
+      - "5432:5432"
+    volumes:
+      - scribal_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "scribal"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Optional: pgAdmin UI at http://localhost:5050
+  pgadmin:
+    image: dpage/pgadmin4:8
+    container_name: scribal-pgadmin
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin1234
+    ports:
+      - "5050:80"
+    volumes:
+      - scribal_pgadmin:/var/lib/pgadmin
+
+volumes:
+  scribal_pgdata:
+  scribal_pgadmin:
+
