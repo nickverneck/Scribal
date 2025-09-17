@@ -53,3 +53,16 @@ Notes
 - Frontend dev server binds to `0.0.0.0` inside container and is published to host `:5173`.
 - Backend dev server runs migrations at start and binds to `0.0.0.0` on `:5174`.
 - Inside Docker network, the server reaches Postgres via `db:5432`; the browser reaches the server via `http://localhost:5174`.
+
+Ubuntu VM Provisioning (no Docker)
+- Script: `scripts/provision_ubuntu.sh`
+  - Installs Node 20, Nginx, netfilter-persistent
+  - Copies `deploy/nginx/scribal.conf` into `/etc/nginx/sites-available/scribal`
+  - Enables config, disables default, starts Nginx
+  - Opens iptables ports 80 and 443 and saves rules
+- Usage on the VM:
+  1. Copy the repo or the two files `scripts/provision_ubuntu.sh` and `deploy/nginx/scribal.conf` to the VM
+  2. Run: `bash scripts/provision_ubuntu.sh`
+  3. Edit `/etc/nginx/sites-available/scribal` to set `server_name` (domain or IP)
+  4. Ensure your frontend listens on `127.0.0.1:5173` and server on `127.0.0.1:5174`
+  5. Later, add SSL (e.g., Certbot) and update Nginx accordingly
