@@ -1,0 +1,20 @@
+# Node
+node_modules
+.pnpm-store
+.turbo
+dist
+build
+.DS_Store
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# SvelteKit
+.svelte-kit
+.vite
+
+# Drizzle
+drizzle
+*.db
