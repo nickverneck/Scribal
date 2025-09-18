@@ -40,7 +40,8 @@ Docker (Postgres only)
 Auto-migrations in dev
 - `npm run dev` for the server will:
   - wait for Postgres (retry up to ~30s)
-  - run migrations from `apps/server/drizzle/`
+  - if Drizzle migrations exist (drizzle/meta/_journal.json), run them
+  - otherwise run any `*.sql` files in `apps/server/drizzle/` as a fallback (idempotent)
   - start Socket.IO + Express
 
 Docker: full stack (dev)
