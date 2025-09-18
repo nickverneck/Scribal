@@ -16,8 +16,8 @@ fi
 echo "[+] Updating apt index"
 $SUDO apt-get update -y
 
-echo "[+] Installing dependencies (curl, gnupg, ca-certificates, lsb-release)"
-$SUDO apt-get install -y curl gnupg ca-certificates lsb-release
+echo "[+] Installing dependencies (curl, gnupg, ca-certificates, lsb-release, software-properties-common)"
+$SUDO apt-get install -y curl gnupg ca-certificates lsb-release software-properties-common
 
 echo "[+] Installing Node.js 20 (NodeSource)"
 curl -fsSL https://deb.nodesource.com/setup_20.x | $SUDO -E bash -
@@ -28,6 +28,12 @@ $SUDO apt-get install -y nginx
 
 echo "[+] Installing netfilter-persistent (for saving iptables rules)"
 $SUDO apt-get install -y netfilter-persistent iptables-persistent || true
+
+echo "[+] Installing PostgreSQL"
+$SUDO apt-get install -y postgresql postgresql-contrib
+
+echo "[+] Enabling and starting PostgreSQL"
+$SUDO systemctl enable --now postgresql
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_SRC="$SCRIPT_DIR/../deploy/nginx/scribal.conf"
@@ -60,5 +66,5 @@ $SUDO netfilter-persistent save || true
 echo "[✓] Provisioning complete."
 echo "    - Nginx proxies http://<your-host>/ to frontend (127.0.0.1:5173)"
 echo "    - /api and /socket.io route to backend (127.0.0.1:5174)"
+echo "    - PostgreSQL is installed and running locally (connect via unix socket by default)"
 echo "    - Edit server_name in /etc/nginx/sites-available/scribal before adding SSL"
-
