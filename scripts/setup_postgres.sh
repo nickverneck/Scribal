@@ -47,9 +47,7 @@ fi
 
 PSQL_ARGS=(
   --dbname postgres
-  --set db_name="$DB_NAME"
-  --set db_user="$DB_USER"
-  --set db_password="$DB_PASSWORD"
+  --set ON_ERROR_STOP=1
 )
 
 if [[ -n "$DB_HOST" ]]; then
@@ -66,42 +64,48 @@ fi
 
 printf '[+] Connecting as %s@%s:%s\n' "$SUPERUSER" "$DB_HOST" "$DB_PORT"
 
-"${PSQL_CMD[@]}" "${PSQL_ARGS[@]}" <<'SQL'
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'db_user') THEN
-    EXECUTE format('CREATE ROLE %I WITH LOGIN PASSWORD %L;', :'db_user', :'db_password');
-    RAISE NOTICE 'Created role %', :'db_user';
-  ELSE
-    EXECUTE format('ALTER ROLE %I WITH LOGIN PASSWORD %L;', :'db_user', :'db_password');
-    RAISE NOTICE 'Role % already exists; password updated.', :'db_user';
-  END IF;
-END
-$$;
+escape_literal() {
+  local value="$1"
+  printf "'%s'" "${value//"'"/"''"}"
+}
 
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT FROM pg_database WHERE datname = :'db_name') THEN
-    EXECUTE format('CREATE DATABASE %I OWNER %I;', :'db_name', :'db_user');
-    RAISE NOTICE 'Created database % with owner %', :'db_name', :'db_user';
-  ELSE
-    EXECUTE format('ALTER DATABASE %I OWNER TO %I;', :'db_name', :'db_user');
-    RAISE NOTICE 'Database % already exists; ownership ensured.', :'db_name';
-  END IF;
-END
-$$;
+escape_identifier() {
+  local value="$1"
+  printf '"%s"' "${value//"\""/"\"\""}"
+}
 
-GRANT ALL PRIVILEGES ON DATABASE :"db_name" TO :"db_user";
-SQL
+run_psql() {
+  "${PSQL_CMD[@]}" "${PSQL_ARGS[@]}" --command "$1" >/dev/null
+}
+
+role_exists=$("${PSQL_CMD[@]}" "${PSQL_ARGS[@]}" -tAc "SELECT 1 FROM pg_roles WHERE rolname = $(escape_literal "$DB_USER")") || true
+if [[ -z "$role_exists" ]]; then
+  run_psql "CREATE ROLE $(escape_identifier "$DB_USER") WITH LOGIN PASSWORD $(escape_literal "$DB_PASSWORD");"
+  echo "[+] Created role $DB_USER"
+else
+  run_psql "ALTER ROLE $(escape_identifier "$DB_USER") WITH LOGIN PASSWORD $(escape_literal "$DB_PASSWORD");"
+  echo "[+] Role $DB_USER already exists; password updated"
+fi
+
+db_exists=$("${PSQL_CMD[@]}" "${PSQL_ARGS[@]}" -tAc "SELECT 1 FROM pg_database WHERE datname = $(escape_literal "$DB_NAME")") || true
+if [[ -z "$db_exists" ]]; then
+  run_psql "CREATE DATABASE $(escape_identifier "$DB_NAME") OWNER $(escape_identifier "$DB_USER");"
+  echo "[+] Created database $DB_NAME owned by $DB_USER"
+else
+  run_psql "ALTER DATABASE $(escape_identifier "$DB_NAME") OWNER TO $(escape_identifier "$DB_USER");"
+  echo "[+] Database $DB_NAME already exists; ownership ensured"
+fi
+
+run_psql "GRANT ALL PRIVILEGES ON DATABASE $(escape_identifier "$DB_NAME") TO $(escape_identifier "$DB_USER");"
+
+echo "[✓] Postgres role $DB_USER and database $DB_NAME are ready."
+
+display_host="$DB_HOST"
+if [[ "$display_host" == "/var/run/postgresql" ]]; then
+  display_host="localhost"
+fi
+printf '    DATABASE_URL=postgres://%s:%s@%s:%s/%s\n' "$DB_USER" "$DB_PASSWORD" "$display_host" "$DB_PORT" "$DB_NAME"
 
 if [[ -n "$SUPERUSER_PASSWORD" ]]; then
   unset PGPASSWORD
 fi
-
-DISPLAY_HOST="$DB_HOST"
-if [[ "$DISPLAY_HOST" == "/var/run/postgresql" ]]; then
-  DISPLAY_HOST="localhost"
-fi
-
-printf '[✓] Postgres role %s and database %s are ready.\n' "$DB_USER" "$DB_NAME"
-printf '    DATABASE_URL=postgres://%s:%s@%s:%s/%s\n' "$DB_USER" "$DB_PASSWORD" "$DISPLAY_HOST" "$DB_PORT" "$DB_NAME"
